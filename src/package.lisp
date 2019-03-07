@@ -36,8 +36,7 @@ Copyright (c) 2019 IBM Corporation
 (defmethod validate-superclass ((c1 serializable-class) (c2 standard-class)) t)
 (defmethod validate-superclass ((c1 standard-class) (c2 serializable-class)) t)
 
-(defclass serializable-object () ((pathname :initarg :pathname))
-  (:metaclass serializable-class))
+(defclass serializable-object () ((pathname :initarg :pathname :initform nil)) (:metaclass serializable-class))
 
 (defgeneric save (instance &key pathname store verbose &allow-other-keys)
   (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
