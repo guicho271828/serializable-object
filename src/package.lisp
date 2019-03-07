@@ -68,8 +68,10 @@ the path is reverted to the original value."))
 (defmethod make-load-form ((instance serializable-object) &optional env)
   (make-load-form-saving-slots instance :environment env))
 
-(defmethod save ((instance serializable-object) &key &allow-other-keys)
+(defmethod save ((instance serializable-object) &key verbose &allow-other-keys)
   (with-slots (pathname) instance
+    (when verbose
+      (format t "~&Saving object ~A to ~a...~%" instance pathname))
     (uiop:with-temporary-file (:stream s :pathname magic-pathname)
       ;; create a temporary file that contains this form only
       (prin1 `(magic-form) s)
