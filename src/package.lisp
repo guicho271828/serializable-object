@@ -23,8 +23,67 @@ Copyright (c) 2019 IBM Corporation
 |#
 
 (in-package :cl-user)
-(defpackage serializable-object
-  (:use :cl :trivia :alexandria :iterate))
+(uiop:define-package serializable-object
+  (:mix :closer-mop :cl)
+  (:use :alexandria))
 (in-package :serializable-object)
 
 ;; blah blah blah.
+
+
+(defclass serializable-class (standard-class) ())
+(defmethod validate-superclass ((c1 serializable-class) (c2 standard-class)) t)
+
+(defclass serializable-object () ((pathname :initarg :pathname))
+  (:metaclass serializable-class))
+
+(defgeneric save (instance &key pathname store verbose &allow-other-keys)
+  (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
+When PATHNAME is given as an argument,
+the object is stored in this file,
+the slot value is _temporarily_ set to this value while saving the instance,
+and the value of PATHNAME is used to save the PATHNAME slot in the saved object.
+
+If STORE is non-nil when PATHNAME is given, PATHNAME also overwrites the slot value in the runtime object.
+Otherwise the PATHNAME slot value is restored to the original value after returning from this function.
+
+When an error occurs during the call to SAVE (e.g. nonexisting directory or permission error),
+the path is reverted to the original value."))
+
+(defmethod save :around ((instance serializable-object) &key pathname store &allow-other-keys)
+  (with-slots ((pathp pathname)) instance
+    (let ((oldpath pathp))
+      (when pathname
+        (setf pathp pathname))
+      (unwind-protect-case ()
+          (call-next-method)
+        (:normal (unless (and pathname store)
+                   (setf pathp pathname)))
+        (:abort  (setf pathp oldpath))))))
+
+(defvar *magic-storage* (make-hash-table))
+(defvar *magic-object*)
+(defmacro magic-form () `(setf (gethash (bt:current-thread) *magic-storage*) ,*magic-object*))
+
+(defmethod make-load-form ((instance serializable-object) &optional env)
+  (make-load-form-saving-slots instance :environment env))
+
+(defmethod save ((instance serializable-object) &key &allow-other-keys)
+  (with-slots (pathname) instance
+    (uiop:with-temporary-file (:stream s :pathname magic-pathname)
+      ;; create a temporary file that contains this form only
+      (prin1 `(magic-form) s)
+      :close-stream
+      (let ((*magic-object* instance))
+        ;; the file compiler expands MAGIC-FORM into a class object literal, calls MAKE-LOAD-FORM, compile, write the result into the pathname
+        (compile-file magic-pathname :output-file pathname)))))
+
+(defmethod make-instance ((class serializable-class) &key pathname (load t) &allow-other-keys)
+  (if (and pathname (probe-file pathname) load)
+      (progn
+        (load pathname)
+        (let ((obj (gethash (bt:current-thread) *magic-storage*)))
+          (remhash (bt:current-thread) *magic-storage*)
+          obj))
+      (call-next-method)))
+
