@@ -3,11 +3,10 @@
 
 This library provides a simple metaclass and API for serializing CLOS objects in a FASL file.
 
-The implementation is focused on a simplicity and conformance;
-It carefully combies the behavior of
-make-load-form and the file compiler specified in CLHS.
-
-Supposed to be thread-safe.
++ The implementation is focused on a simplicity and conformance rather than speed.
++ It carefully combies the behavior of =make-load-form= and the file compiler specified in CLHS.
++ Should be thread-safe.
++ TODO: zip-compress the fasl file, similar to the numpy npz format.
 
 ** Usage
 
@@ -22,19 +21,19 @@ Supposed to be thread-safe.
 
 (defvar *my-instance* (make-instance 'my :verbose t :value 5))
 
-(save *my-instance* :verbose t :pathname "/tmp/my-instance")
-;; => Saving object #<MY {1010174E23}> to /tmp/my-instance.fasl 
+(save *my-instance* :verbose t :pathname "/tmp/tmp")
+;; => Saving object #<MY {1010174E23}> to /tmp/tmp.fasl 
 ;; => ; compiling file "/tmp/tmp5GEXGEG5.tmp" (written 07 MAR 2019 03:55:28 PM):
 ;; => ; compiling (MAGIC-FORM)
 ;; => 
-;; => ; wrote /tmp/my-instance.fasl
+;; => ; wrote /tmp/tmp.fasl
 ;; => ; compilation finished in 0:00:00.002
-;; -> #P"/tmp/my-instance.fasl"
+;; -> #P"/tmp/tmp.fasl"
 ;; -> NIL
 ;; -> NIL
 
-(defvar *another-instance* (make-instance 'my :verbose t :pathname "/tmp/my-instance"))
-;; => ; loading #P"/tmp/my-instance.fasl"
+(defvar *another-instance* (make-instance 'my :verbose t :pathname "/tmp/tmp"))
+;; => ; loading #P"/tmp/tmp.fasl"
 ;; -> *ANOTHER-INSTANCE*
 
 (print (slot-value *another-instance* 'value))
