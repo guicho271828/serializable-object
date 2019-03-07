@@ -26,7 +26,7 @@ Copyright (c) 2019 IBM Corporation
 (uiop:define-package serializable-object
   (:mix :closer-mop :cl)
   (:use :alexandria)
-  (:export serializable-object save))
+  (:export serializable-class serializable-object save))
 (in-package :serializable-object)
 
 ;; blah blah blah.
@@ -60,7 +60,7 @@ the path is reverted to the original value."))
       (unwind-protect-case ()
           (call-next-method)
         (:normal (unless (and pathname store)
-                   (setf pathp pathname)))
+                   (setf pathp oldpath)))
         (:abort  (setf pathp oldpath))))))
 
 (defvar *magic-storage* (make-hash-table))
@@ -73,21 +73,40 @@ the path is reverted to the original value."))
 (defmethod save ((instance serializable-object) &key verbose &allow-other-keys)
   (with-slots (pathname) instance
     (when verbose
-      (format t "~&Saving object ~A to ~a...~%" instance pathname))
-    (uiop:with-temporary-file (:stream s :pathname magic-pathname)
+      (format t "~&Saving object ~A to ~a ~%" instance pathname))
+    (uiop:with-temporary-file (:stream s :pathname magic-pathname :keep t)
       ;; create a temporary file that contains this form only
       (prin1 `(magic-form) s)
+      (finish-output s)
       :close-stream
+      ;; (format t "~& magic-pathname ~a ~%" magic-pathname)
       (let ((*magic-object* instance))
         ;; the file compiler expands MAGIC-FORM into a class object literal, calls MAKE-LOAD-FORM, compile, write the result into the pathname
-        (compile-file magic-pathname :output-file pathname)))))
+        (compile-file magic-pathname :output-file pathname
+                      :verbose verbose)))))
 
-(defmethod make-instance ((class serializable-class) &key pathname (load t) &allow-other-keys)
-  (if (and pathname (probe-file pathname) load)
-      (progn
-        (load pathname)
-        (let ((obj (gethash (bt:current-thread) *magic-storage*)))
-          (remhash (bt:current-thread) *magic-storage*)
-          obj))
-      (call-next-method)))
+(defmethod make-instance ((class serializable-class) &rest args
+                          &key pathname (load nil load-specified-p) verbose &allow-other-keys)
+  (remf args :load)
+  (remf args :verbose)
+  (flet ((do-load ()
+           (load pathname :verbose verbose)
+           (multiple-value-bind (obj present) (gethash (bt:current-thread) *magic-storage*)
+             (assert present)
+             (remhash (bt:current-thread) *magic-storage*)
+             obj)))
+    
+    (cond
+      (load
+       (assert (and pathname (probe-file pathname)))
+       (do-load))
+      
+      ((and load-specified-p (null load))
+       ;; when specified to nil, do not load
+       (apply #'call-next-method class args))
 
+      (t
+       ;; if unspecified, then load optionally
+       (if (and pathname (probe-file pathname))
+           (do-load)
+           (apply #'call-next-method class args))))))
