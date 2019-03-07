@@ -1,5 +1,13 @@
 
-* Serializable-Object - Provides a simple class and API for the objects serializable in a FASL file
+* Serializable-Object
+
+This library provides a simple metaclass and API for serializing CLOS objects in a FASL file.
+
+The implementation is focused on a simplicity and conformance;
+It carefully combies the behavior of
+make-load-form and the file compiler specified in CLHS.
+
+Supposed to be thread-safe.
 
 ** Usage
 
@@ -41,11 +49,10 @@ This library is at least tested on implementation listed below:
 
 Also, it depends on the following libraries:
 
-+ trivia by *Masataro Asai* :
-    NON-optimized pattern matcher compatible with OPTIMA, with extensible optimizer interface and clean codebase
 + alexandria by *Nikodemus Siivola <nikodemus@sb-studio.net>, and others.* :
     Alexandria is a collection of portable public domain utilities.
 + closer-mop
++ bordeaux-threads
 
 ** Author, License, Copyright
 
