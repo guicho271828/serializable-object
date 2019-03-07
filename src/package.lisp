@@ -53,6 +53,7 @@ the path is reverted to the original value."))
 (defmethod save :around ((instance serializable-object) &key pathname store &allow-other-keys)
   (with-slots ((pathp pathname)) instance
     (let ((oldpath pathp))
+      (assert (or oldpath pathname))
       (when pathname
         (setf pathp pathname))
       (unwind-protect-case ()
