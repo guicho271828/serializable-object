@@ -25,7 +25,8 @@ Copyright (c) 2019 IBM Corporation
 (in-package :cl-user)
 (uiop:define-package serializable-object
   (:mix :closer-mop :cl)
-  (:use :alexandria))
+  (:use :alexandria)
+  (:export serializable-object save))
 (in-package :serializable-object)
 
 ;; blah blah blah.
