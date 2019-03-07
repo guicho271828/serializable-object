@@ -41,9 +41,10 @@ Copyright (c) 2019 IBM Corporation
 (defgeneric save (instance &key pathname store verbose &allow-other-keys)
   (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
 When PATHNAME is given as an argument,
-the object is stored in this file,
-the slot value is _temporarily_ set to this value while saving the instance,
-and the value of PATHNAME is used to save the PATHNAME slot in the saved object.
+
++ the object is stored in the file specified by PATHNAME,
++ the slot value is _temporarily_ set to this value while saving the instance,
++ and the value of PATHNAME is used to save the PATHNAME slot in the saved object.
 
 If STORE is non-nil when PATHNAME is given, PATHNAME also overwrites the slot value in the runtime object.
 Otherwise the PATHNAME slot value is restored to the original value after returning from this function.
