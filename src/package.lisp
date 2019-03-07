@@ -33,6 +33,7 @@ Copyright (c) 2019 IBM Corporation
 
 (defclass serializable-class (standard-class) ())
 (defmethod validate-superclass ((c1 serializable-class) (c2 standard-class)) t)
+(defmethod validate-superclass ((c1 standard-class) (c2 serializable-class)) t)
 
 (defclass serializable-object () ((pathname :initarg :pathname))
   (:metaclass serializable-class))
