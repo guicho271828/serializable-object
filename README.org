@@ -3,6 +3,8 @@
 
 This library provides a simple metaclass and API for serializing CLOS objects in a FASL file.
 
++ It exposes =serializable-class=, =serializable-object= and =save= generic function.
+  An instance of =serializable-object= has a slot =pathname=.
 + The implementation is focused on a simplicity and conformance rather than speed.
 + It carefully combies the behavior of =make-load-form= and the file compiler specified in CLHS.
 + Should be thread-safe.
