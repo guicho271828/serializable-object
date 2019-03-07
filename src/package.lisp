@@ -73,7 +73,7 @@ the path is reverted to the original value."))
 (defmethod save ((instance serializable-object) &key verbose &allow-other-keys)
   (with-slots (pathname) instance
     (when verbose
-      (format t "~&Saving object ~A to ~a ~%" instance pathname))
+      (format t "~&Saving object ~A to ~a ~%" instance (compile-file-pathname pathname)))
     (uiop:with-temporary-file (:stream s :pathname magic-pathname :keep t)
       ;; create a temporary file that contains this form only
       (prin1 `(magic-form) s)
@@ -90,7 +90,7 @@ the path is reverted to the original value."))
   (remf args :load)
   (remf args :verbose)
   (flet ((do-load ()
-           (load pathname :verbose verbose)
+           (load (compile-file-pathname pathname) :verbose verbose)
            (multiple-value-bind (obj present) (gethash (bt:current-thread) *magic-storage*)
              (assert present)
              (remhash (bt:current-thread) *magic-storage*)
@@ -98,7 +98,7 @@ the path is reverted to the original value."))
     
     (cond
       (load
-       (assert (and pathname (probe-file pathname)))
+       (assert (and pathname (probe-file (compile-file-pathname pathname))))
        (do-load))
       
       ((and load-specified-p (null load))
@@ -107,6 +107,6 @@ the path is reverted to the original value."))
 
       (t
        ;; if unspecified, then load optionally
-       (if (and pathname (probe-file pathname))
+       (if (and pathname (probe-file (compile-file-pathname pathname)))
            (do-load)
            (apply #'call-next-method class args))))))
