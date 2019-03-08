@@ -38,7 +38,7 @@ Copyright (c) 2019 IBM Corporation
 
 (defclass serializable-object () ((pathname :initarg :pathname :initform nil)) (:metaclass serializable-class))
 
-(defgeneric save (instance &key pathname store verbose &allow-other-keys)
+(defgeneric save (instance &key pathname store verbose parents &allow-other-keys)
   (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
 When PATHNAME is given as an argument,
 
@@ -48,6 +48,9 @@ When PATHNAME is given as an argument,
 
 If STORE is non-nil when PATHNAME is given, PATHNAME also overwrites the slot value in the runtime object.
 Otherwise the PATHNAME slot value is restored to the original value after returning from this function.
+
+If PARENTS is non-nil (default: t), ENSURE-DIRECTORIES-EXIST is called to
+ensure that the path exists.
 
 When an error occurs during the call to SAVE (e.g. nonexisting directory or permission error),
 the path is reverted to the original value."))
