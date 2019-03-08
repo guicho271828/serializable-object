@@ -23,20 +23,17 @@ Copyright (c) 2019 IBM Corporation
 |#
 
 (in-package :cl-user)
-(uiop:define-package serializable-object
-  (:mix :closer-mop :cl)
-  (:use :alexandria)
-  (:export serializable-class serializable-object save))
+(defpackage serializable-object
+  (:use :cl :alexandria)
+  (:export serializable-object save load-instance))
 (in-package :serializable-object)
 
 ;; blah blah blah.
 
+(defclass serializable-object () ((pathname :initarg :pathname :initform nil)))
 
-(defclass serializable-class (standard-class) ())
-(defmethod validate-superclass ((c1 serializable-class) (c2 standard-class)) t)
-(defmethod validate-superclass ((c1 standard-class) (c2 serializable-class)) t)
-
-(defclass serializable-object () ((pathname :initarg :pathname :initform nil)) (:metaclass serializable-class))
+(defmethod make-load-form ((instance serializable-object) &optional env)
+  (make-load-form-saving-slots instance :environment env))
 
 (defgeneric save (instance &key pathname store verbose parents &allow-other-keys)
   (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
@@ -53,7 +50,20 @@ If PARENTS is non-nil (default: t), ENSURE-DIRECTORIES-EXIST is called to
 ensure that the path exists.
 
 When an error occurs during the call to SAVE (e.g. nonexisting directory or permission error),
-the path is reverted to the original value."))
+the path is reverted to the original value.
+
+How it works:
+
+1. SAVE generic-function stores a single line of macro (initialization-form) to a temporary file
+   and compiles a file under the dynamic environment where *instance* is bound to the object to be stored.
+
+2. file compiler expands the macro to the code that sets *instance* to the value of *instance*.
+   MAKE-LOAD-FORM expands the value into a loadable form.
+
+3. to load the instance, LOAD-INSTANCE function sets up a dynamic binding for *instance*
+   and load the compiled file in this dynamic environment. The compiled code sets the stored
+   to *instance*. LOAD-INSTANCE retrieves this value.
+"))
 
 (defmethod save :around ((instance serializable-object) &key pathname store &allow-other-keys)
   (with-slots ((pathp pathname)) instance
@@ -67,50 +77,47 @@ the path is reverted to the original value."))
                    (setf pathp oldpath)))
         (:abort  (setf pathp oldpath))))))
 
-(defvar *magic-storage* (make-hash-table))
-(defvar *magic-object*)
-(defmacro magic-form () `(setf (gethash (bt:current-thread) *magic-storage*) ,*magic-object*))
+(defvar *instance*)
+(defmacro initialization-form ()
+  `(setf *instance* ,*instance*))
 
-(defmethod make-load-form ((instance serializable-object) &optional env)
-  (make-load-form-saving-slots instance :environment env))
-
-(defmethod save ((instance serializable-object) &key verbose &allow-other-keys)
+(defmethod save ((instance serializable-object) &key verbose (parents t) &allow-other-keys)
   (with-slots (pathname) instance
+    ;; (let ((pathname (compile-file-pathname pathname)))
     (when verbose
-      (format t "~&Saving object ~A to ~a ~%" instance (compile-file-pathname pathname)))
-    (uiop:with-temporary-file (:stream s :pathname magic-pathname :keep t)
-      ;; create a temporary file that contains this form only
-      (prin1 `(magic-form) s)
-      (finish-output s)
+      (format t "~&Saving object ~A to ~a ~%" instance pathname))
+    (when parents
+      (ensure-directories-exist pathname :verbose verbose))
+    (uiop:with-temporary-file (:stream s :pathname source)
+      (when verbose
+        (format t "~&Writing a magic code to ~a ~%" source))
+      (prin1 `(initialization-form) s)
       :close-stream
-      ;; (format t "~& magic-pathname ~a ~%" magic-pathname)
-      (let ((*magic-object* instance))
-        ;; the file compiler expands MAGIC-FORM into a class object literal, calls MAKE-LOAD-FORM, compile, write the result into the pathname
-        (compile-file magic-pathname :output-file pathname
+      (let ((*instance* instance))
+        (compile-file source
+                      :output-file pathname
                       :verbose verbose)))))
 
-(defmethod make-instance ((class serializable-class) &rest args
-                          &key pathname (load nil load-specified-p) verbose &allow-other-keys)
-  (remf args :load)
-  (remf args :verbose)
-  (flet ((do-load ()
-           (load (compile-file-pathname pathname) :verbose verbose)
-           (multiple-value-bind (obj present) (gethash (bt:current-thread) *magic-storage*)
-             (assert present)
-             (remhash (bt:current-thread) *magic-storage*)
-             obj)))
-    
-    (cond
-      (load
-       (assert (and pathname (probe-file (compile-file-pathname pathname))))
-       (do-load))
-      
-      ((and load-specified-p (null load))
-       ;; when specified to nil, do not load
-       (apply #'call-next-method class args))
+(defun load-instance (class &rest args &key pathname (if-does-not-exist t) verbose &allow-other-keys)
+  "Load an instane from a file.
 
-      (t
-       ;; if unspecified, then load optionally
-       (if (and pathname (probe-file (compile-file-pathname pathname)))
-           (do-load)
-           (apply #'call-next-method class args))))))
+When IF-DOES-NOT-EXIST is non-nil, it checks file existence.
+When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with the specified arguments.
+
+It always checks if the loaded object is of the same class."
+  (remf args :if-does-not-exist)
+  (remf args :verbose)
+  ;; (let ((pathname (compile-file-pathname pathname)))
+  (flet ((do-load ()
+           (let (*instance*)
+             (load pathname :verbose verbose)
+             (assert (typep *instance* class))
+             *instance*)))
+
+    (if if-does-not-exist
+        (progn
+          (assert (and pathname (probe-file pathname)))
+          (do-load))
+        (if (and pathname (probe-file pathname))
+            (do-load)
+            (apply #'make-instance class args)))))

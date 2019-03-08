@@ -5,7 +5,7 @@
   :mailto "guicho2.71828@gmail.com"
   :license "LGPL"
   :defsystem-depends-on ()
-  :depends-on (:alexandria :bordeaux-threads :closer-mop)
+  :depends-on (:alexandria)
   :pathname "src"
   :components ((:file "package"))
   :description "Provides a simple class and API for the objects serializable in a FASL file"
