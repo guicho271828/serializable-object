@@ -54,15 +54,17 @@ the path is reverted to the original value.
 
 How it works:
 
-1. SAVE generic-function stores a single line of macro (initialization-form) to a temporary file
-   and compiles a file under the dynamic environment where *instance* is bound to the object to be stored.
+1. SAVE generic-function stores a single line of macro (initialization-form) to
+   a temporary file and compiles a file under the dynamic environment where a
+   special variable *instance* is bound to the object to be stored.
 
-2. file compiler expands the macro to the code that sets *instance* to the value of *instance*.
-   MAKE-LOAD-FORM expands the value into a loadable form.
+2. The file compiler expands the macro to the code that sets *instance* to the
+   value of *instance*.  MAKE-LOAD-FORM expands the value into a loadable form.
 
-3. to load the instance, LOAD-INSTANCE function sets up a dynamic binding for *instance*
-   and load the compiled file in this dynamic environment. The compiled code sets the stored
-   to *instance*. LOAD-INSTANCE retrieves this value.
+3. To load the instance, LOAD-INSTANCE function sets up a dynamic binding for
+   *instance* and load the compiled file in this dynamic environment. The
+   compiled code sets the newly created object (by evaluating the form produced
+   by make-load-form) to *instance*. LOAD-INSTANCE retrieves this value.
 "))
 
 (defmethod save :around ((instance serializable-object) &key pathname store &allow-other-keys)
@@ -99,12 +101,13 @@ How it works:
                         :verbose verbose))))))
 
 (defun load-instance (class &rest args &key pathname (if-does-not-exist t) verbose &allow-other-keys)
-  "Load an instane from a file.
+  "Load an instance from a file.
 
-When IF-DOES-NOT-EXIST is non-nil, it checks file existence.
-When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with the specified arguments.
-
-It always checks if the loaded object is of the same class."
++ When IF-DOES-NOT-EXIST is non-nil (default), it checks the file existence.
++ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with the specified arguments.
++ When verbose is non-nil, it writes messages to the standard output.
++ It always checks if the loaded object is of the specified class.
+"
   (remf args :if-does-not-exist)
   (remf args :verbose)
   (let ((fasl (when pathname
