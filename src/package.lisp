@@ -83,20 +83,20 @@ How it works:
 
 (defmethod save ((instance serializable-object) &key verbose (parents t) &allow-other-keys)
   (with-slots (pathname) instance
-    ;; (let ((pathname (compile-file-pathname pathname)))
-    (when verbose
-      (format t "~&Saving object ~A to ~a ~%" instance pathname))
-    (when parents
-      (ensure-directories-exist pathname :verbose verbose))
-    (uiop:with-temporary-file (:stream s :pathname source)
+    (let ((fasl (compile-file-pathname pathname)))
       (when verbose
-        (format t "~&Writing a magic code to ~a ~%" source))
-      (prin1 `(initialization-form) s)
-      :close-stream
-      (let ((*instance* instance))
-        (compile-file source
-                      :output-file pathname
-                      :verbose verbose)))))
+        (format t "~&Saving object ~A to ~a ~%" instance fasl))
+      (when parents
+        (ensure-directories-exist fasl :verbose verbose))
+      (uiop:with-temporary-file (:stream s :pathname source)
+        (when verbose
+          (format t "~&Writing a magic code to ~a ~%" source))
+        (prin1 `(initialization-form) s)
+        :close-stream
+        (let ((*instance* instance))
+          (compile-file source
+                        :output-file fasl
+                        :verbose verbose))))))
 
 (defun load-instance (class &rest args &key pathname (if-does-not-exist t) verbose &allow-other-keys)
   "Load an instane from a file.
@@ -107,17 +107,17 @@ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANC
 It always checks if the loaded object is of the same class."
   (remf args :if-does-not-exist)
   (remf args :verbose)
-  ;; (let ((pathname (compile-file-pathname pathname)))
-  (flet ((do-load ()
-           (let (*instance*)
-             (load pathname :verbose verbose)
-             (assert (typep *instance* class))
-             *instance*)))
-
-    (if if-does-not-exist
-        (progn
-          (assert (and pathname (probe-file pathname)))
-          (do-load))
-        (if (and pathname (probe-file pathname))
-            (do-load)
-            (apply #'make-instance class args)))))
+  (let ((fasl (when pathname
+                (compile-file-pathname pathname))))
+    (flet ((do-load ()
+             (let (*instance*)
+               (load fasl :verbose verbose)
+               (assert (typep *instance* class))
+               *instance*)))
+      (if if-does-not-exist
+          (progn
+            (assert (and fasl (probe-file fasl)))
+            (do-load))
+          (if (and fasl (probe-file fasl))
+              (do-load)
+              (apply #'make-instance class args))))))
