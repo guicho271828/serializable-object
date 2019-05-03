@@ -1,0 +1,55 @@
+
+* Serializable-Object - Provides a simple class and API for the objects serializable in a FASL file
+
+** Usage
+
+#+begin_src lisp
+(ql:quickload :serializable-object)
+(in-package :serializable-object)
+
+
+(defclass my (serializable-object)
+  ((value :initarg :value :initform nil))
+  (:metaclass serializable-class))
+
+(defvar *my-instance* (make-instance 'my :verbose t :value 5))
+
+(save *my-instance* :verbose t :pathname "/tmp/my-instance")
+;; => Saving object #<MY {1010174E23}> to /tmp/my-instance.fasl 
+;; => ; compiling file "/tmp/tmp5GEXGEG5.tmp" (written 07 MAR 2019 03:55:28 PM):
+;; => ; compiling (MAGIC-FORM)
+;; => 
+;; => ; wrote /tmp/my-instance.fasl
+;; => ; compilation finished in 0:00:00.002
+;; -> #P"/tmp/my-instance.fasl"
+;; -> NIL
+;; -> NIL
+
+(defvar *another-instance* (make-instance 'my :verbose t :pathname "/tmp/my-instance"))
+;; => ; loading #P"/tmp/my-instance.fasl"
+;; -> *ANOTHER-INSTANCE*
+
+(print (slot-value *another-instance* 'value))
+;; => 5
+
+#+end_src
+
+** Dependencies
+This library is at least tested on implementation listed below:
+
++ SBCL 1.4.12 on X86-64 Linux 4.4.0-142-generic (author's environment)
+
+Also, it depends on the following libraries:
+
++ trivia by *Masataro Asai* :
+    NON-optimized pattern matcher compatible with OPTIMA, with extensible optimizer interface and clean codebase
++ alexandria by *Nikodemus Siivola <nikodemus@sb-studio.net>, and others.* :
+    Alexandria is a collection of portable public domain utilities.
++ closer-mop
+
+** Author, License, Copyright
+
+Licensed under LGPL v3.
+
+Copyright (c) 2019 Masataro Asai (guicho2.71828@gmail.com)
+Copyright (c) 2019 IBM Corporation
