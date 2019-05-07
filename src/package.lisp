@@ -85,42 +85,40 @@ How it works:
 
 (defmethod save ((instance serializable-object) &key verbose (parents t) &allow-other-keys)
   (with-slots (pathname) instance
-    (let ((fasl (compile-file-pathname pathname)))
+    (when verbose
+      (format t "~&Saving object ~A to ~a ~%" instance pathname))
+    (when parents
+      (ensure-directories-exist pathname :verbose verbose))
+    (uiop:with-temporary-file (:stream s :pathname source)
       (when verbose
-        (format t "~&Saving object ~A to ~a ~%" instance fasl))
-      (when parents
-        (ensure-directories-exist fasl :verbose verbose))
-      (uiop:with-temporary-file (:stream s :pathname source)
-        (when verbose
-          (format t "~&Writing a magic code to ~a ~%" source))
-        (prin1 `(initialization-form) s)
-        :close-stream
-        (let ((*instance* instance))
-          (compile-file source
-                        :output-file fasl
-                        :verbose verbose))))))
+        (format t "~&Writing a magic code to ~a ~%" source))
+      (prin1 `(initialization-form) s)
+      :close-stream
+      (let ((*instance* instance))
+        (compile-file source
+                      :output-file pathname
+                      :verbose verbose)))))
 
-(defun load-instance (class &rest args &key pathname (if-does-not-exist t) verbose &allow-other-keys)
-  "Load an instance from a file.
+(defun load-instance (&rest args &key (class 'serializable-object) pathname (if-does-not-exist t) verbose &allow-other-keys)
+  "Load an instance from a file, given the PATHNAME which was used to .
 
 + When IF-DOES-NOT-EXIST is non-nil (default), it checks the file existence.
-+ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with the specified arguments.
-+ When verbose is non-nil, it writes messages to the standard output.
-+ It always checks if the loaded object is of the specified class.
++ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with CLASS.
++ When VERBOSE is non-nil, it writes messages to the standard output.
++ When CLASS is non-nil, it always checks if the loaded object is of CLASS.
 "
   (remf args :if-does-not-exist)
+  (remf args :class)
   (remf args :verbose)
-  (let ((fasl (when pathname
-                (compile-file-pathname pathname))))
-    (flet ((do-load ()
-             (let (*instance*)
-               (load fasl :verbose verbose)
-               (assert (typep *instance* class))
-               *instance*)))
-      (if if-does-not-exist
-          (progn
-            (assert (and fasl (probe-file fasl)))
-            (do-load))
-          (if (and fasl (probe-file fasl))
-              (do-load)
-              (apply #'make-instance class args))))))
+  (flet ((do-load ()
+           (let (*instance*)
+             (load pathname :verbose verbose)
+             (assert (typep *instance* class))
+             *instance*)))
+    (if if-does-not-exist
+        (progn
+          (assert (and pathname (probe-file pathname)))
+          (do-load))
+        (if (and pathname (probe-file pathname))
+            (do-load)
+            (apply #'make-instance class args)))))
