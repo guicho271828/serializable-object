@@ -99,13 +99,17 @@ How it works:
                       :output-file pathname
                       :verbose verbose)))))
 
-(defun load-instance (&rest args &key (class 'serializable-object) pathname (if-does-not-exist t) verbose &allow-other-keys)
-  "Load an instance from a file, given the PATHNAME which was used to .
+(defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose &allow-other-keys)
+  "Load an instance from PATHNAME which was used when the object was saved.
+The loaded instance should be of type CLASS.
 
-+ When IF-DOES-NOT-EXIST is non-nil (default), it checks the file existence.
-+ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with CLASS.
 + When VERBOSE is non-nil, it writes messages to the standard output.
-+ When CLASS is non-nil, it always checks if the loaded object is of CLASS.
+
++ When IF-DOES-NOT-EXIST is :error (default), it signals an error when the file is missing.
+
++ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls
+  MAKE-INSTANCE with CLASS, with :pathname parameter and other parameters
+  specified in ARGS except :if-does-not-exist, :class, :verbose.
 "
   (remf args :if-does-not-exist)
   (remf args :class)
@@ -115,10 +119,11 @@ How it works:
              (load pathname :verbose verbose)
              (assert (typep *instance* class))
              *instance*)))
-    (if if-does-not-exist
-        (progn
-          (assert (and pathname (probe-file pathname)))
-          (do-load))
-        (if (and pathname (probe-file pathname))
-            (do-load)
-            (apply #'make-instance class args)))))
+    (ecase if-does-not-exist
+      (:error
+       (assert (and pathname (probe-file pathname)))
+       (do-load))
+      ((nil)
+       (if (and pathname (probe-file pathname))
+           (do-load)
+           (apply #'make-instance class :pathname pathname args))))))

@@ -44,28 +44,28 @@ Copyright (c) 2019 IBM Corporation
   (uiop:with-temporary-file (:pathname p)
     (let ((a (make-instance 'my)))
       (save a :verbose t :pathname p)
-      (let ((b (load-instance :class 'my :verbose t :pathname p)))
+      (let ((b (load-instance p :class 'my :verbose t)))
         (is (my= a b)))))
   ;; specifies value=5
   (uiop:with-temporary-file (:pathname p)
     (let ((a (make-instance 'my :value 5)))
       (save a :verbose t :pathname p)
-      (let ((b (load-instance :class 'my :verbose t :pathname p)))
+      (let ((b (load-instance p :class 'my :verbose t)))
         (is (my= a b))))))
 
 (test errors
   (signals error
-    (load-instance :class 'my :verbose t :pathname "/no/such/file")
+    (load-instance "/no/such/file" :class 'my :verbose t)
     "the file does not exist")
   (signals error
-    (load-instance :class 'my :verbose t :pathname "/no/such/file" :if-does-not-exist t)
+    (load-instance "/no/such/file" :class 'my :verbose t :if-does-not-exist t)
     "the file does not exist")
   (finishes
     ;; == make-instance
-    (load-instance :class 'my :verbose t :pathname "/no/such/file" :if-does-not-exist nil))
+    (load-instance "/no/such/file" :class 'my :verbose t :if-does-not-exist nil))
   (uiop:with-temporary-file (:pathname p)
     (signals error
-      (load-instance :class 'my :verbose t :pathname p :if-does-not-exist t)
+      (load-instance p :class 'my :verbose t :if-does-not-exist t)
       "empty file"))
   (signals error
     (save (make-instance 'my) :verbose t :pathname "/no/such/directiory/file" :parents nil)
@@ -88,9 +88,9 @@ Copyright (c) 2019 IBM Corporation
           (save a :verbose t :pathname p2))
         (is (eql (slot-value a 'pathname) p1))
         ;;
-        (is (= (slot-value (load-instance :class 'my :pathname p1) 'value) 5))
+        (is (= (slot-value (load-instance p1 :class 'my) 'value) 5))
         (setf (slot-value a 'value) 7)
         (save a :verbose t)
-        (is (= (slot-value (load-instance :class 'my :pathname p1) 'value) 7)
+        (is (= (slot-value (load-instance p1 :class 'my) 'value) 7)
             "the value is properly overwritten")))))
 
