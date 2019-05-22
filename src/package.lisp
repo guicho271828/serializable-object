@@ -94,15 +94,18 @@ How it works:
       (prin1 `(initialization-form) s)
       :close-stream
       (let ((*instance* instance))
-        (compile-file source
-                      :output-file pathname
-                      :verbose verbose)
-        (when compression
-          (uiop:run-program (format nil "gzip ~@[~*-f~] ~@[~*-v~] ~a" overwrite verbose pathname)
-                            :output t
-                            :error-output t))))))
+        (if compression
+            (uiop:with-temporary-file (:pathname uncompressed)
+              (compile-file source
+                            :output-file uncompressed
+                            :verbose verbose)
+              (uiop:run-program (format nil "gzip -c ~@[~*-f~] ~@[~*-v~] ~a > ~a"
+                                        overwrite verbose uncompressed pathname)))
+            (compile-file source
+                          :output-file pathname
+                          :verbose verbose))))))
 
-(defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose (compression t) &allow-other-keys)
+(defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose &allow-other-keys)
   "Load an instance from PATHNAME which was used when the object was saved.
 The loaded instance should be of type CLASS.
 
@@ -119,11 +122,14 @@ The loaded instance should be of type CLASS.
   (remf args :verbose)
   (flet ((do-load ()
            (let (*instance*)
-             (when compression
-               (uiop:run-program (format nil "gunzip ~@[~*-v~] ~a" verbose pathname)
-                                 :output t
-                                 :error-output t))
-             (load pathname :verbose verbose)
+             (handler-case
+                 ;; try decompression
+                 (uiop:with-temporary-file (:pathname uncompressed)
+                   (uiop:run-program (format nil "gunzip -c ~@[~*-v~] ~a > ~a"
+                                             verbose pathname uncompressed))
+                   (load uncompressed :verbose verbose))
+               (uiop:subprocess-error ()
+                 (load pathname :verbose verbose)))
              (assert (typep *instance* class))
              *instance*)))
     (ecase if-does-not-exist
