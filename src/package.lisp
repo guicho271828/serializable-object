@@ -82,7 +82,7 @@ How it works:
 (defvar *instance*)
 (defmacro initialization-form () `(setf *instance* ,*instance*))
 
-(defmethod save ((instance serializable-object) &key verbose (parents t) (compression t) &allow-other-keys)
+(defmethod save ((instance serializable-object) &key verbose (parents t) (compression t) (overwrite t) &allow-other-keys)
   (with-slots (pathname) instance
     (when verbose
       (format t "~&Saving object ~A to ~a ~%" instance pathname))
@@ -98,7 +98,7 @@ How it works:
                       :output-file pathname
                       :verbose verbose)
         (when compression
-          (uiop:run-program (format nil "gzip ~@[~*-v~] ~a" verbose pathname)
+          (uiop:run-program (format nil "gzip ~@[~*-f~] ~@[~*-v~] ~a" overwrite verbose pathname)
                             :output t
                             :error-output t))))))
 
