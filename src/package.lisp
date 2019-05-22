@@ -94,16 +94,19 @@ How it works:
       (prin1 `(initialization-form) s)
       :close-stream
       (let ((*instance* instance))
-        (if compression
-            (uiop:with-temporary-file (:pathname uncompressed)
-              (compile-file source
-                            :output-file uncompressed
-                            :verbose verbose)
-              (uiop:run-program (format nil "gzip -c ~@[~*-f~] ~@[~*-v~] ~a > ~a"
-                                        overwrite verbose uncompressed pathname)))
-            (compile-file source
-                          :output-file pathname
-                          :verbose verbose))))))
+        (unwind-protect
+             (if compression
+                 (uiop:with-temporary-file (:pathname uncompressed)
+                   (compile-file source
+                                 :output-file uncompressed
+                                 :verbose verbose)
+                   (uiop:run-program (format nil "gzip -c ~@[~*-f~] ~@[~*-v~] ~a > ~a"
+                                             overwrite verbose uncompressed pathname)))
+                 (compile-file source
+                               :output-file pathname
+                               :verbose verbose))
+          (when verbose
+            (fresh-line)))))))
 
 (defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose &allow-other-keys)
   "Load an instance from PATHNAME which was used when the object was saved.
@@ -130,6 +133,8 @@ The loaded instance should be of type CLASS.
                    (load uncompressed :verbose verbose))
                (uiop:subprocess-error ()
                  (load pathname :verbose verbose)))
+             (when verbose
+               (fresh-line))
              (assert (typep *instance* class))
              *instance*)))
     (ecase if-does-not-exist
