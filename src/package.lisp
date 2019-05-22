@@ -35,7 +35,7 @@ Copyright (c) 2019 IBM Corporation
 (defmethod make-load-form ((instance serializable-object) &optional env)
   (make-load-form-saving-slots instance :environment env))
 
-(defgeneric save (instance &key pathname store verbose parents &allow-other-keys)
+(defgeneric save (instance &key pathname store verbose parents compression &allow-other-keys)
   (:documentation "Save an instance to a FASL file using the value of PATHNAME slot in the instance.
 When PATHNAME is given as an argument,
 
@@ -80,10 +80,9 @@ How it works:
         (:abort  (setf pathp oldpath))))))
 
 (defvar *instance*)
-(defmacro initialization-form ()
-  `(setf *instance* ,*instance*))
+(defmacro initialization-form () `(setf *instance* ,*instance*))
 
-(defmethod save ((instance serializable-object) &key verbose (parents t) &allow-other-keys)
+(defmethod save ((instance serializable-object) &key verbose (parents t) (compression t) &allow-other-keys)
   (with-slots (pathname) instance
     (when verbose
       (format t "~&Saving object ~A to ~a ~%" instance pathname))
@@ -97,9 +96,13 @@ How it works:
       (let ((*instance* instance))
         (compile-file source
                       :output-file pathname
-                      :verbose verbose)))))
+                      :verbose verbose)
+        (when compression
+          (uiop:run-program (format nil "gzip ~@[~*-v~] ~a" verbose pathname)
+                            :output t
+                            :error-output t))))))
 
-(defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose &allow-other-keys)
+(defun load-instance (pathname &rest args &key (class 'serializable-object) (if-does-not-exist :error) verbose (compression t) &allow-other-keys)
   "Load an instance from PATHNAME which was used when the object was saved.
 The loaded instance should be of type CLASS.
 
@@ -116,6 +119,10 @@ The loaded instance should be of type CLASS.
   (remf args :verbose)
   (flet ((do-load ()
            (let (*instance*)
+             (when compression
+               (uiop:run-program (format nil "gunzip ~@[~*-v~] ~a" verbose pathname)
+                                 :output t
+                                 :error-output t))
              (load pathname :verbose verbose)
              (assert (typep *instance* class))
              *instance*)))
