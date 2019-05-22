@@ -99,12 +99,14 @@ How it works:
                  (uiop:with-temporary-file (:pathname uncompressed)
                    (compile-file source
                                  :output-file uncompressed
-                                 :verbose verbose)
+                                 :verbose verbose
+                                 :print verbose)
                    (uiop:run-program (format nil "gzip -c ~@[~*-f~] ~@[~*-v~] ~a > ~a"
                                              overwrite verbose uncompressed pathname)))
                  (compile-file source
                                :output-file pathname
-                               :verbose verbose))
+                               :verbose verbose
+                               :print verbose))
           (when verbose
             (fresh-line)))))))
 
@@ -130,9 +132,13 @@ The loaded instance should be of type CLASS.
                  (uiop:with-temporary-file (:pathname uncompressed)
                    (uiop:run-program (format nil "gunzip -c ~@[~*-v~] ~a > ~a"
                                              verbose pathname uncompressed))
-                   (load uncompressed :verbose verbose))
+                   (load uncompressed
+                         :verbose verbose
+                         :print verbose))
                (uiop:subprocess-error ()
-                 (load pathname :verbose verbose)))
+                 (load pathname
+                       :verbose verbose
+                       :print verbose)))
              (when verbose
                (fresh-line))
              (assert (typep *instance* class))
