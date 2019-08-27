@@ -93,6 +93,85 @@ Load an instance from a file.
 + When verbose is non-nil, it writes messages to the standard output.
 + It always checks if the loaded object is of the specified class.
 
+** Related Work
+
+*** hu.dwim.serializer
+
+http://quickdocs.org/hu.dwim.serializer/api
+
++ documentation : poor
++ tutorial : none
++ performance : unknown
++ scope / usability : all CLOS objects
+  + cyclic references?
+  + displaced arrays?
+
+*** trivial-hashtable-serialize
+
+http://quickdocs.org/trivial-hashtable-serialize/
+
++ documentation : poor
++ tutorial : good
++ performance : unknown
++ scope / usability : hash table only
+
+*** cl-store
+
+http://quickdocs.org/cl-store/
+
++ documentation : minimal
++ tutorial : none
++ performance : unknown. to a 32bit int stream
++ scope / usability : All CLOS class.
+  + arrays?
+  + cyclic references?
+  + Exported slots can be customized, all slots by default.
+  + Consideres the class slots.
+
+*** cl-marshall
+
+http://quickdocs.org/cl-marshall/
+
++ documentation : minimal (source code) good (tutorial)
++ tutorial : good
++ performance : unknown. to a string that consists of a list
++ scope / usability :
+  + needs to specify class-persistent-slots.
+  + cyclic refernces?
+  + displaced arrays?
+  + Exported slots can be customized, needs to be specified for each class.
+  + no consideration for class slots.
+
+*** persistent-variables
+
+http://quickdocs.org/persistent-variables/
+
++ documentation : 
++ tutorial : 
++ performance : 
++ scope / usability :
+  + very specific. needs to be declared as defpvar
+
+*** userial
+
+http://quickdocs.org/userial/
+
++ documentation : 
++ tutorial : 
++ performance : 
++ scope / usability :
+  + offers the versioning system
+  + but heavily depends on ContextL.
+
+*** specialization-store
+
+http://quickdocs.org/userial/
+
++ documentation : 
++ tutorial : there is an extensive tutorial, but the idea seems too complicated.
++ performance : 
++ scope / usability : 
+
 ** Dependencies
 This library is at least tested on implementation listed below:
 
