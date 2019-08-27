@@ -7,11 +7,14 @@ This library provides an abstract class for serializing CLOS objects in a FASL f
   An instance of =serializable-object= has a slot =pathname=.
 + The implementation focuses on simplicity and conformance rather than speed.
 + It carefully combines the behavior of =make-load-form= and the file compiler specified in CLHS.
+  + This guarantees the correct behavior for storing and loading the references (e.g. cyclic reference, displaced arrays)
 + Should be thread-safe.
 + =:compression t= compresses the fasl file, similar to the numpy =.npz= format.
 
 *TODO:* The current implementation stores objects into a fasl file, which is
-implementation-dependent.
+implementation-dependent. Future work may instead use an existing CLOS object serializer.
+The reason we do not use them is that the existing serializers are incomplete:
+It does not allow storing arbitrary objects.
 
 ** Usage
 
