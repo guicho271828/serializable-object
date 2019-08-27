@@ -10,6 +10,9 @@ This library provides an abstract class for serializing CLOS objects in a FASL f
 + Should be thread-safe.
 + =:compression t= compresses the fasl file, similar to the numpy =.npz= format.
 
+*TODO:* The current implementation stores objects into a fasl file, which is
+implementation-dependent.
+
 ** Usage
 
 #+begin_src lisp
