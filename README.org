@@ -8,7 +8,7 @@ This library provides an abstract class for serializing CLOS objects in a FASL f
 + The implementation focuses on simplicity and conformance rather than speed.
 + It carefully combines the behavior of =make-load-form= and the file compiler specified in CLHS.
 + Should be thread-safe.
-+ TODO: zip-compress the fasl file, similar to the numpy =.npz= format.
++ =:compression t= compresses the fasl file, similar to the numpy =.npz= format.
 
 ** Usage
 
