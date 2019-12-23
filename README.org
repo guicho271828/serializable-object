@@ -11,10 +11,22 @@ This library provides an abstract class for serializing CLOS objects in a FASL f
 + Should be thread-safe.
 + =:compression t= compresses the fasl file, similar to the numpy =.npz= format.
 
-*TODO:* The current implementation stores objects into a fasl file, which is
-implementation-dependent. Future work may instead use an existing CLOS object serializer.
-The reason we do not use them is that the existing serializers are incomplete:
-It does not allow storing arbitrary objects.
+*TODO:* The current implementation stores an object into a fasl file, whose format is
+implementation-dependent (and also version dependent).
+Future work could instead use an existing CLOS object serializer.
+
+We do not use them currently for various reasons:
+First, the existing serializers are incomplete and unreliable; They are not as thoroughly tested
+as the default serialization performed in =compile-file= and =load=,
+which is required by the standard and is provided by each Lisp implementation.
+# Relying on this feature minimizes the risk of encountering the corner cases,
+#  e.g. how the non-CLOS objects are encoded in a binary format through references.
+The strongest selling point of this library is this reliability,
+with the cost of being restricted to the FASL-compatible lisp versions.
+# One way to address this restriction would be to write a FASL converter script between the 
+# different =lisp-implementation-version= and =lisp-implementation-type= using
+# lisp environment switcher such as [[https://github.com/roswell/roswell][Roswell]] and write a implementation-independent communication system.
+
 
 *TODO:* This library was originally written as a MOP abstract class.
 However, the initial implementation with MOP was not working as intended 
@@ -178,7 +190,7 @@ http://quickdocs.org/userial/
 
 *** specialization-store
 
-http://quickdocs.org/userial/
+http://quickdocs.org/specialization-store/
 
 + documentation : 
 + tutorial : there is an extensive tutorial, but the idea seems too complicated.
