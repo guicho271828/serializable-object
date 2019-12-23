@@ -1,5 +1,5 @@
 
-* Serializable-Object
+* Serializable-Object [[https://github.com/guicho271828/serializable-object][https://travis-ci.org/guicho271828/serializable-object.svg?branch=master]]
 
 This library provides an abstract class for serializing CLOS objects in a FASL file.
 
