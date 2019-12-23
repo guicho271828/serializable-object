@@ -43,6 +43,32 @@ This library provides a simple metaclass and API for serializing CLOS objects in
 
 #+end_src
 
+** API
+
+: (make-instance (class serializable-class) &key pathname (load nil load-specified-p) verbose &allow-other-keys)
+
+The library overrides the default method of =make-instance=.
+
++ When =LOAD= is non-nil, it checks =PATHNAME= and the specified path, then load the object.
++ When =LOAD= is specified to =nil=, it instantiates the object normally without loading from the =PATHNAME=.
+  The =PATHNAME= slot is also set.
++ When =LOAD= is not specified, it loads from the file if it exists; Otherwise it instantiates the object normally.
+
+: (save instance &key pathname store verbose &allow-other-keys)
+
+Save an instance to a FASL file using the value of PATHNAME slot in the instance.
+When PATHNAME is given as an argument,
+
++ the object is stored in the file specified by PATHNAME,
++ the slot value is _temporarily_ set to this value while saving the instance,
++ and the value of PATHNAME is used to save the PATHNAME slot in the saved object.
+
+If STORE is non-nil when PATHNAME is given, the PATHNAME slot in the runtime object remains overwritten.
+Otherwise the PATHNAME slot value is restored to the original value after returning from this function.
+
+When an error occurs during the call to SAVE (e.g. nonexisting directory or permission error),
+the path is reverted to the original value.
+
 ** Dependencies
 This library is at least tested on implementation listed below:
 
