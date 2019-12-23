@@ -16,6 +16,13 @@ implementation-dependent. Future work may instead use an existing CLOS object se
 The reason we do not use them is that the existing serializers are incomplete:
 It does not allow storing arbitrary objects.
 
+*TODO:* This library was originally written as a MOP abstract class.
+However, the initial implementation with MOP was not working as intended 
+and I decided to switch to the easier solution due to the timeframe.
+In the future, we will pursue the API where =make-instance= can take
+=:path= and other keywords which are used for loading an instance if necessary.
+
+
 ** Usage
 
 #+begin_src lisp
