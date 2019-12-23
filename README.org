@@ -1,14 +1,14 @@
 
 * Serializable-Object
 
-This library provides a simple metaclass and API for serializing CLOS objects in a FASL file.
+This library provides an abstract class for serializing CLOS objects in a FASL file.
 
-+ It exposes =serializable-class=, =serializable-object= and =save= generic function.
++ It exposes =serializable-object= class, =save= generic function and =load-instance= function.
   An instance of =serializable-object= has a slot =pathname=.
-+ The implementation is focused on a simplicity and conformance rather than speed.
-+ It carefully combies the behavior of =make-load-form= and the file compiler specified in CLHS.
++ The implementation focuses on simplicity and conformance rather than speed.
++ It carefully combines the behavior of =make-load-form= and the file compiler specified in CLHS.
 + Should be thread-safe.
-+ TODO: zip-compress the fasl file, similar to the numpy npz format.
++ TODO: zip-compress the fasl file, similar to the numpy =.npz= format.
 
 ** Usage
 
@@ -18,23 +18,22 @@ This library provides a simple metaclass and API for serializing CLOS objects in
 
 
 (defclass my (serializable-object)
-  ((value :initarg :value :initform nil))
-  (:metaclass serializable-class))
+  ((value :initarg :value :initform nil)))
 
-(defvar *my-instance* (make-instance 'my :verbose t :value 5))
+(defparameter *my-instance* (make-instance 'my :value 5))
 
 (save *my-instance* :verbose t :pathname "/tmp/tmp")
-;; => Saving object #<MY {1010174E23}> to /tmp/tmp.fasl 
-;; => ; compiling file "/tmp/tmp5GEXGEG5.tmp" (written 07 MAR 2019 03:55:28 PM):
-;; => ; compiling (MAGIC-FORM)
+;; => Saving object #<MY {100E9DDC83}> to /tmp/tmp 
+;; => Writing a magic code to /tmp/tmpAAURSO1.tmp 
+;; => ; compiling file "/tmp/tmpAAURSO1.tmp" (written 12 MAR 2019 12:54:04 PM):
+;; => ; compiling (INITIALIZATION-FORM)
 ;; => 
 ;; => ; wrote /tmp/tmp.fasl
-;; => ; compilation finished in 0:00:00.002
+;; -> ; compilation finished in 0:00:00.004
 ;; -> #P"/tmp/tmp.fasl"
-;; -> NIL
-;; -> NIL
+;; -> ()
 
-(defvar *another-instance* (make-instance 'my :verbose t :pathname "/tmp/tmp"))
+(defparameter *another-instance* (load-instance 'my :verbose t :pathname "/tmp/tmp"))
 ;; => ; loading #P"/tmp/tmp.fasl"
 ;; -> *ANOTHER-INSTANCE*
 
@@ -45,16 +44,14 @@ This library provides a simple metaclass and API for serializing CLOS objects in
 
 ** API
 
-: (make-instance (class serializable-class) &key pathname (load nil load-specified-p) verbose &allow-other-keys)
+: Class SERIALIZABLE-OBJECT
 
-The library overrides the default method of =make-instance=.
+Abstract class.
 
-+ When =LOAD= is non-nil, it checks =PATHNAME= and the specified path, then load the object.
-+ When =LOAD= is specified to =nil=, it instantiates the object normally without loading from the =PATHNAME=.
-  The =PATHNAME= slot is also set.
-+ When =LOAD= is not specified, it loads from the file if it exists; Otherwise it instantiates the object normally.
-
-: (save instance &key pathname store verbose &allow-other-keys)
+:  Generic function (save instance &key pathname store verbose parents)
+:  Methods:
+:    (save (serializable-object))
+:    (save :around (serializable-object))
 
 Save an instance to a FASL file using the value of PATHNAME slot in the instance.
 When PATHNAME is given as an argument,
@@ -63,11 +60,38 @@ When PATHNAME is given as an argument,
 + the slot value is _temporarily_ set to this value while saving the instance,
 + and the value of PATHNAME is used to save the PATHNAME slot in the saved object.
 
-If STORE is non-nil when PATHNAME is given, the PATHNAME slot in the runtime object remains overwritten.
+If STORE is non-nil when PATHNAME is given, PATHNAME also overwrites the slot value in the runtime object.
 Otherwise the PATHNAME slot value is restored to the original value after returning from this function.
+
+If PARENTS is non-nil (default: t), ENSURE-DIRECTORIES-EXIST is called to
+ensure that the path exists.
 
 When an error occurs during the call to SAVE (e.g. nonexisting directory or permission error),
 the path is reverted to the original value.
+
+How it works:
+
+1. SAVE generic-function stores a single line of macro (initialization-form) to
+   a temporary file and compiles a file under the dynamic environment where a
+   special variable *instance* is bound to the object to be stored.
+
+2. The file compiler expands the macro to the code that sets *instance* to the
+   value of *instance*.  MAKE-LOAD-FORM expands the value into a loadable form.
+
+3. To load the instance, LOAD-INSTANCE function sets up a dynamic binding for
+   *instance* and load the compiled file in this dynamic environment. The
+   compiled code sets the newly created object (by evaluating the form produced
+   by make-load-form) to *instance*. LOAD-INSTANCE retrieves this value.
+
+
+: Function (load-instance class &key pathname (if-does-not-exist t) verbose &allow-other-keys)
+
+Load an instance from a file.
+
++ When IF-DOES-NOT-EXIST is non-nil (default), it checks the file existence.
++ When IF-DOES-NOT-EXIST is nil and the file does not exist, it calls MAKE-INSTANCE with the specified arguments.
++ When verbose is non-nil, it writes messages to the standard output.
++ It always checks if the loaded object is of the specified class.
 
 ** Dependencies
 This library is at least tested on implementation listed below:
