@@ -99,6 +99,8 @@ How it works:
                  (uiop:with-temporary-file (:pathname uncompressed)
                    (compile-file source
                                  :output-file uncompressed
+                                 ;; CCL complains when the output file exists and is not a FASL file
+                                 #+ccl :force #+ccl t
                                  :verbose verbose
                                  :print verbose)
                    (uiop:run-program (format nil "gzip -c ~@[~*-f~] ~@[~*-v~] ~a > ~a"
